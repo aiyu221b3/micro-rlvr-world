@@ -16,27 +16,27 @@ The implementation follows the paper's core formulation while making explicit re
 
 | Component | Paper specification | Implementation | Fidelity and scope |
 |---|---|---|---|
-| **Compressive visual tokenization** | Dual VQGAN $(E_c, D_c)$ and $(E_v, D_v)$ with Finite Scalar Quantization (FSQ) and cross-attention to a preceding context frame $s_c$ | `DualCompressiveVQGAN` and `FSQ` ($$L = [5, 5, 5]$$, $$K = 125$$) in `src/networks.py` with 2D spatial positional embeddings and gated cross-attention | Core architecture reproduced at reduced spatial resolution (8×8 context, 4×4 dynamics) |
-| **Unified multimodal vocabulary** | Offset vocabulary combining context visual tokens, dynamics tokens, and 256-bin quantized continuous vectors | `UnifiedWorldSequenceBuilder` ($$|V| = 508$$) in `src/networks.py` | Tokenization and non-overlapping offset scheme reproduced |
+| **Compressive visual tokenization** | Dual VQGAN $(E_c, D_c)$ and $(E_v, D_v)$ with Finite Scalar Quantization (FSQ) and cross-attention to a preceding context frame $s_c$ | `DualCompressiveVQGAN` and `FSQ` (`L = [5, 5, 5]`, `K = 125`) in `src/networks.py` with 2D spatial positional embeddings and gated cross-attention | Core architecture reproduced at reduced spatial resolution (8×8 context, 4×4 dynamics) |
+| **Unified multimodal vocabulary** | Offset vocabulary combining context visual tokens, dynamics tokens, and 256-bin quantized continuous vectors | `UnifiedWorldSequenceBuilder(\|V\|= 508)` in `src/networks.py` | Tokenization and non-overlapping offset scheme reproduced |
 | **Autoregressive world model** | 12-layer LLaMA (138M parameters) with RoPE, RMSNorm, and SwiGLU trained with masked next-token cross-entropy on state tokens only | 4-layer `MicroLLaMA` in `src/networks.py` with causal target mask `get_multistep_target_mask` | Architecture and state-only loss masking reproduced at reduced parameter count |
-| **Off-policy GRPO post-training** | Group sampling `{o_i}_{i=1}^G ~ p_{theta_old}`, group-normalized advantages $$A_i$$, inner mini-batch ratio clipping, and KL penalty to `p_ref` | `train_video_rlvr_grpo` in `src/rl.py` | Update equations and multi-mini-batch off-policy loop reproduced |
+| **Off-policy GRPO post-training** | Group sampling ${o_i}_{i=1}^G ~ p_{theta_old}$, group-normalized advantages $A_i$, inner mini-batch ratio clipping, and KL penalty to `p_ref` | `train_video_rlvr_grpo` in `src/rl.py` | Update equations and multi-mini-batch off-policy loop reproduced |
 | **Verifiable decoded rewards** | `-sum [L1(s_hat, s) + LPIPS(s_hat, s)]` plus proprioceptive MSE and repetition penalty (video); Eq. (4) state-diff reward (text) | `compute_video_verifiable_rewards` and `compute_text_reward` in `src/rl.py` | Reward functions and non-differentiable decode-then-score pipeline reproduced |
 | **Environment and horizon** | RT-1 / PushT (256×320 or 224×224, 7-step multi-step rollout) and ByteSized32 text games | 32×32 continuous 2D block-pushing (3-step rollout) and 144-state symbolic kitchen game | Deliberate scale and horizon reduction |
 
 ### Group Relative Policy Optimization (GRPO) objective
 
-Given an input history sequence `q(s_{<=t}, a_{<=t})`, the behavior policy `p_{theta_old}` samples a group of `G` candidate future token trajectories `{o_i}_{i=1}^G`, decodes each into its native modality `s'_i`, and scores it against ground truth `s'` via a verifiable metric `R_i = sign(D) * D(s'_i, s')`.
+Given an input history sequence $q(s_{<=t}, a_{<=t})$, the behavior policy $p_{theta_old}$ samples a group of $G$ candidate future token trajectories ${o_i}_{i=1}^G$, decodes each into its native modality $s'_i$, and scores it against ground truth $s'$ via a verifiable metric `R_i = sign(D) * D(s'_i, s')`.
 
 The group-relative advantage and clipped objective are:
 
-```text
-A_i = (R_i - mean({R_1, ..., R_G})) / (std({R_1, ..., R_G}) + eps)
+$
+A_i = (R_i - mean({R_1, ..., R_G})) / (std({R_1, ..., R_G}) + eps)$
 
-J_GRPO(theta) = (1 / G) * sum_{i=1}^G (1 / |o_i|) * sum_{t=1}^{|o_i|} [
+$J_GRPO(theta) = (1 / G) * sum_{i=1}^G (1 / |o_i|) * sum_{t=1}^{|o_i|} [
     min(r_{i,t}(theta) * A_i, clip(r_{i,t}(theta), 1 - eps_clip, 1 + eps_clip) * A_i)
     - beta * D_KL(p_theta || p_ref)
-]
-```
+]$
+
 
 The corresponding PyTorch update over inner mini-batches is implemented in `src/rl.py`:
 
@@ -56,7 +56,7 @@ loss = -(torch.min(s1, s2) - 1e-3 * kl).mean()
 The study focuses on five mechanism-level questions:
 
 1. Does RLVR post-training improve multi-step visual prediction metrics (LPIPS, MSE, PSNR, SSIM) over the MLE base model on held-out trajectories?
-2. How does the GRPO group size $$G \in \{2, 4, 8\}$$ affect optimization stability and test-set LPIPS across seeds?
+2. How does the GRPO group size `G in {2, 4, 8}` affect optimization stability and test-set LPIPS across seeds?
 3. How does test-time Best-of-`N` sampling compare between the MLE base model and the RLVR-tuned model?
 4. How do sparse binary rewards compare with structured task-specific rewards (Equation 4) on state-changing vs. unchanged transitions in symbolic language world modeling?
 5. Where do low-resolution spatial quantization and single-metric reward optimization fail to replicate full-scale benchmarks (specifically in metric-specific specialization and Real2Sim policy ranking)?
@@ -67,7 +67,7 @@ The study focuses on five mechanism-level questions:
 
 The experimental suite evaluates three independent training seeds (`42`, `43`, and `44`) on held-out test sets (`n = 120` disjoint manipulation trajectories for video world modeling; `n = 400` transitions for symbolic language world modeling; `n = 50` episodes per policy checkpoint for Real2Sim evaluation).
 
-![RLVR-World Scoped Mechanism Diagnostic Dashboard](results/figures/rlvr_world_diagnostic_dashboard.png)
+![RLVR-World Scoped Mechanism Diagnostic Dashboard](results/figures/rlvr_world_diagnostic_dashboard.jpg)
 
 ### 1. Multi-step video world model performance (`results/exp5_table3_multiseed.csv`)
 
@@ -86,7 +86,7 @@ Across `n = 120` held-out multi-step trajectories and 3 seeds, post-training the
 ### 2. Group size scaling and test-time Best-of-`N` scaling (`results/exp6a_group_size_scaling.csv`)
 
 - **Group size scaling (Panel b):** All three group sizes start from the exact same Step-0 base checkpoint (`24.25` test LPIPS). At `G = 2`, two-sample advantage normalization is too noisy to improve test performance (`24.51 ± 0.49` at Step 32). Increasing the group size to `G = 4` (`23.34 ± 0.14`) and `G = 8` (`23.26 ± 0.14`) reliably reduces test LPIPS and tightens inter-seed variance. Because `G = 4` and `G = 8` overlap within one standard deviation at convergence, the supported conclusion in this environment is that `G >= 4` is required for stable variance reduction over `G = 2`.
-- **Test-time Best-of-`N` scaling (Panel a):** Across `n = 120` test trajectories, RLVR-World outperforms the MLE base model at every sample budget $$N \in \{1, 2, 4, 8\}$$, but the margin narrows from **0.93** LPIPS points at `N = 1` (`23.32` vs. `24.25`) to **0.27** points at `N = 8` (`18.31` vs. `18.58`). At `N = 1`, RLVR recovers roughly half the perceptual gain of doubling test-time compute to `N = 2` on the base model (`22.10`), consistent with mode-seeking policy sharpening.
+- **Test-time Best-of-`N` scaling (Panel a):** Across `n = 120` test trajectories, RLVR-World outperforms the MLE base model at every sample budget `N in {1, 2, 4, 8}`, but the margin narrows from **0.93** LPIPS points at `N = 1` (`23.32` vs. `24.25`) to **0.27** points at `N = 8` (`18.31` vs. `18.58`). At `N = 1`, RLVR recovers roughly half the perceptual gain of doubling test-time compute to `N = 2` on the base model (`22.10`), consistent with mode-seeking policy sharpening.
 
 ### 3. Symbolic language world model (`results/exp1_language_world_model.csv`)
 
@@ -109,7 +109,7 @@ A primary objective of this repository is to report where reduced-scale toy envi
 
 ### 1. Absence of a diagonal in metric-oriented optimization (Panel c, `results/exp6b_fig4c_raw_and_norm.csv`)
 
-In the original paper's Figure 4c, post-training a video world model on a single metric $$X \in \{\mathrm{MAE}, \mathrm{MSE}, \mathrm{PSNR}, \mathrm{SSIM}, \mathrm{LPIPS}\}$$ yields a diagonal heatmap where each model performs best on its own training metric. **That claim is not reproduced in this 32×32 environment.**
+In the original paper's Figure 4c, post-training a video world model on a single metric `X in {MAE, MSE, PSNR, SSIM, LPIPS}` yields a diagonal heatmap where each model performs best on its own training metric. **That claim is not reproduced in this 32×32 environment.**
 
 | Test metric (`n = 120`) | Base (MLE) | MAE-trained | MSE-trained | PSNR-trained | SSIM-trained | LPIPS-trained |
 |---|---:|---:|---:|---:|---:|---:|
@@ -129,7 +129,7 @@ In the original paper's Figure 4c, post-training a video world model on a single
 In Panel (d), six closed-loop proportional-derivative (PD) policy checkpoints (`P1` through `P6`, `n = 50` episodes each) span real environment success rates from **0.38** to **1.00**. However, when rolled out inside both the Base and RLVR world models, evaluated success rates remain flat between **0.00** and **0.18** (`r = -0.26` for Base, `r = -0.50` for RLVR).
 
 - **Mechanistic diagnosis:**
-  1. **Spatial quantization vs. short-horizon boundary margin:** Over a 3-step rollout starting at $$x_0 = 0.46$$, successful real pushes barely cross the goal radius boundary ($$x_{\mathrm{final}} \in [0.53, 0.56]$$ for goal $$0.68 \pm 0.15$$). Because the compressive dynamics encoder `E_v` downsamples $$32 \times 32 \rightarrow 4 \times 4$$ ($$8 \times 8$$ pixel macro-blocks `= 0.25` arena units), sub-grid displacements near the goal boundary snap to coarse grid centers.
+  1. **Spatial quantization vs. short-horizon boundary margin:** Over a 3-step rollout starting at `x_0 = 0.46`, successful real pushes barely cross the goal radius boundary (`x_final in [0.53, 0.56]` for goal `0.68 +- 0.15`). Because the compressive dynamics encoder `E_v` downsamples `32×32 -> 4×4` (`8×8` pixel macro-blocks `= 0.25` arena units), sub-grid displacements near the goal boundary snap to coarse grid centers.
   2. **Prior bias in rollout dynamics (Panel e):** While the VQGAN Oracle row in Panel (e) accurately reconstructs both the red effector and blue block from ground-truth tokens, both Base and RLVR autoregressive rollouts exhibit a bias toward a canonical downward-right push trajectory. When the evaluated policy executes subtle closed-loop corrections, the world model's prior under-shoots the goal threshold.
 
 ---
