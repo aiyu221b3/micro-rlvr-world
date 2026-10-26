@@ -67,7 +67,7 @@ The study focuses on five mechanism-level questions:
 
 The experimental suite evaluates three independent training seeds (`42`, `43`, and `44`) on held-out test sets (`n = 120` disjoint manipulation trajectories for video world modeling; `n = 400` transitions for symbolic language world modeling; `n = 50` episodes per policy checkpoint for Real2Sim evaluation).
 
-![RLVR-World Scoped Mechanism Diagnostic Dashboard](results/figures/rlvr_world_diagnostic_dashboard.jpg)
+![RLVR-World Scoped Mechanism Diagnostic Dashboard](results/figures/rlvr_world_diagnostic_dashboard.png)
 
 ### 1. Multi-step video world model performance (`results/exp5_table3_multiseed.csv`)
 
