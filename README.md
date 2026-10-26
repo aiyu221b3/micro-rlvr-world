@@ -42,7 +42,7 @@ A self-contained, single-GPU PyTorch implementation and empirical audit of the c
 
 * **Supported Claim:** $G = 2$ fails to improve over Base due to noisy 2-sample mean/std advantage estimates. Increasing to $G \ge 4$ reliably reduces LPIPS, though $G = 4$ and $G = 8$ are statistically indistinguishable at Step 32 ($23.34 \pm 0.14$ vs. $23.26 \pm 0.13$).
 
-### C. Best-of-$N$ Test-Time Scaling (`exp6a_best_of_n_bootstrap_ci.csv`, $n = 120$, Paired Bootstrap)
+### C. Best-of-($N$) Test-Time Scaling (`exp6a_best_of_n_bootstrap_ci.csv`, $n = 120$, Paired Bootstrap)
 * At $N=1$, RLVR-World improves LPIPS by $0.93$ points ($23.32$ vs. $24.25$), recovering roughly half the gain of doubling Base test-time compute to $N=2$ ($22.10$). The gap narrows as $N$ grows ($0.56$ at $N=2$, $0.88$ at $N=4$, $0.27$ at $N=8$), consistent with RLVR sharpening the policy around high-reward modes while reducing tail entropy.
 
 ---
