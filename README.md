@@ -177,7 +177,7 @@ micro-rlvr-world/
 Clone the repository and install dependencies:
 
 ```bash
-git clone [https://github.com/aiyu221b3/micro-rlvr-world.git](https://github.com/aiyu221b3/micro-rlvr-world.git)
+git clone https://github.com/aiyu221b3/micro-rlvr-world.git
 cd micro-rlvr-world
 pip install -r requirements.txt
 ```
