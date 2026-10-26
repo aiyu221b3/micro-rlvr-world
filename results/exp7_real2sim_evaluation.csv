@@ -1,0 +1,7 @@
+Policy_Checkpoint,Noise_Level,N_Trials,Real_SR,Base_Sim_SR,RLVR_Sim_SR
+Policy-Begin,1.0,50,0.38,0.1,0.08
+Policy-15%,0.75,50,0.66,0.08,0.1
+Policy-35%,0.55,50,0.76,0.16,0.08
+Policy-60%,0.35,50,0.7,0.08,0.1
+Policy-85%,0.18,50,0.54,0.18,0.04
+Policy-Conv,0.04,50,1.0,0.08,0.0
